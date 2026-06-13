@@ -13,7 +13,9 @@ services:
       MYSQL_DATABASE: pterodactyl
       MYSQL_USER: pterodactyl
       MYSQL_PASSWORD: pterodactyl
-    command: --default-authentication-plugin=mysql_native_password
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --require_secure_transport=OFF
 
   cache:
     image: redis:alpine
@@ -45,6 +47,11 @@ services:
       DB_DATABASE: "pterodactyl"
       DB_USERNAME: "pterodactyl"
       DB_PASSWORD: "pterodactyl"
+      DB_SSL: "false"
+      DB_SSL_CA: ""
+      DB_SSL_CERT: ""
+      DB_SSL_KEY: ""
+      DB_SSL_VERIFY_SERVER_CERT: "false"
       CACHE_DRIVER: "redis"
       SESSION_DRIVER: "redis"
       QUEUE_DRIVER: "redis"
