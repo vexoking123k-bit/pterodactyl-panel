@@ -2,18 +2,18 @@ version: '3.8'
 
 services:
   database:
-    image: mariadb:10.5
+    image: mysql:8.0
     restart: always
     networks:
       - pterodactyl
     volumes:
       - db_data:/var/lib/mysql
-    command: --skip-ssl
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: pterodactyl
       MYSQL_USER: pterodactyl
       MYSQL_PASSWORD: pterodactyl
+    command: --default-authentication-plugin=mysql_native_password
 
   cache:
     image: redis:alpine
