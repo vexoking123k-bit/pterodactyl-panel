@@ -2,13 +2,14 @@
   "name": "Pterodactyl Panel",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/sshd:1": {}
   },
-  "forwardPorts": [80, 443],
+  "forwardPorts": [80, 443, 2222],
   "portsAttributes": {
     "80": {
       "label": "Pterodactyl Panel",
-      "onAutoForward": "openBrowser"
+      "onAutoForward": "notify"
     }
   },
   "postCreateCommand": "bash .devcontainer/setup.sh",
