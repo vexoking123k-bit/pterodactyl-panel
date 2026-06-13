@@ -1,2 +1,2 @@
 [client]
-ssl-mode=DISABLED
+skip-ssl
