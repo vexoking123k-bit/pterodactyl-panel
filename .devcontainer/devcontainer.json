@@ -5,13 +5,12 @@
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/sshd:1": {}
   },
-  "forwardPorts": [80, 443, 2222],
+  "forwardPorts": [80, 443],
   "portsAttributes": {
     "80": {
       "label": "Pterodactyl Panel",
       "onAutoForward": "notify"
     }
   },
-  "postCreateCommand": "bash .devcontainer/setup.sh",
   "remoteUser": "root"
 }
