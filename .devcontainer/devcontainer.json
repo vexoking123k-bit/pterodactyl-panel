@@ -1,0 +1,16 @@
+{
+  "name": "Pterodactyl Panel",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "forwardPorts": [80, 443],
+  "portsAttributes": {
+    "80": {
+      "label": "Pterodactyl Panel",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "remoteUser": "root"
+}
