@@ -1,0 +1,6 @@
+.git
+.env*
+backups
+panel-source/.git
+panel-source/node_modules
+panel-source/vendor

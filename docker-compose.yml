@@ -1,69 +1,82 @@
-version: '3.8'
-
 services:
   database:
-    image: mysql:8.0
-    restart: always
-    networks:
-      - pterodactyl
+    image: mariadb:11.4
+    restart: unless-stopped
     volumes:
       - db_data:/var/lib/mysql
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: pterodactyl
-      MYSQL_USER: pterodactyl
-      MYSQL_PASSWORD: pterodactyl
-    command: >
-      --default-authentication-plugin=mysql_native_password
-      --require_secure_transport=OFF
-
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Run scripts/start.sh}
+      MARIADB_DATABASE: panel
+      MARIADB_USER: pterodactyl
+      MARIADB_PASSWORD: ${DB_PASSWORD:?Run scripts/start.sh}
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
   cache:
-    image: redis:alpine
-    restart: always
-    networks:
-      - pterodactyl
-
-  panel:
-    image: ghcr.io/pterodactyl/panel:latest
-    restart: always
-    networks:
-      - pterodactyl
-    ports:
-      - "80:80"
-      - "443:443"
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
     volumes:
-      - panel_var:/app/var/
-      - panel_nginx:/etc/nginx/http.d/
-      - panel_certs:/etc/letsencrypt/
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  panel:
+    build:
+      context: .
+      dockerfile: Dockerfile.workbench
+    image: pterodactyl-workbench:1.15.2
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - panel_var:/app/var
       - panel_logs:/app/storage/logs
-      - ./mysql-no-ssl.cnf:/root/.my.cnf:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
-      APP_URL: "http://localhost"
-      APP_TIMEZONE: "UTC"
-      APP_SERVICE_AUTHOR: "admin@wiskcraft.com"
-      MAIL_FROM: "admin@wiskcraft.com"
-      MAIL_DRIVER: "log"
-      DB_HOST: "database"
+      PTERODACTYL_WINGS_INTERNAL_NODE_ID: "1"
+      PTERODACTYL_WINGS_INTERNAL_URL: "http://host.docker.internal:8081"
+      APP_URL: ${APP_URL:?Run scripts/start.sh}
+      APP_KEY: ${APP_KEY:?Run scripts/start.sh}
+      HASHIDS_SALT: ${HASHIDS_SALT:?Run scripts/start.sh}
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_TIMEZONE: Europe/Berlin
+      APP_SERVICE_AUTHOR: admin@example.invalid
+      APP_ENVIRONMENT_ONLY: "false"
+      TRUSTED_PROXIES: "*"
+      SESSION_SECURE_COOKIE: "true"
+      MAIL_DRIVER: log
+      MAIL_FROM: admin@example.invalid
+      DB_HOST: database
       DB_PORT: "3306"
-      DB_DATABASE: "pterodactyl"
-      DB_USERNAME: "pterodactyl"
-      DB_PASSWORD: "pterodactyl"
-      CACHE_DRIVER: "redis"
-      SESSION_DRIVER: "redis"
-      QUEUE_DRIVER: "redis"
-      REDIS_HOST: "cache"
+      DB_DATABASE: panel
+      DB_USERNAME: pterodactyl
+      DB_PASSWORD: ${DB_PASSWORD}
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      QUEUE_DRIVER: redis
+      REDIS_HOST: cache
       REDIS_PORT: "6379"
     depends_on:
-      - database
-      - cache
-
-networks:
-  pterodactyl:
-    driver: bridge
-
+      database:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/auth/login"]
+      interval: 15s
+      timeout: 10s
+      start_period: 90s
+      retries: 20
 volumes:
   db_data:
+  redis_data:
   panel_var:
-  panel_nginx:
-  panel_certs:
   panel_logs:

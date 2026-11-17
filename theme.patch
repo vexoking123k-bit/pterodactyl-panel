@@ -1,0 +1,1897 @@
+diff --git a/app/Repositories/Wings/DaemonRepository.php b/app/Repositories/Wings/DaemonRepository.php
+index 512626d..0d0f2f0 100644
+--- a/app/Repositories/Wings/DaemonRepository.php
++++ b/app/Repositories/Wings/DaemonRepository.php
+@@ -52,7 +52,9 @@ abstract class DaemonRepository
+ 
+         return new Client([
+             'verify' => $this->app->environment('production'),
+-            'base_uri' => $this->node->getConnectionAddress(),
++            'base_uri' => $this->node->id === (int) config('pterodactyl.wings_internal_node_id') && config('pterodactyl.wings_internal_url')
++                ? rtrim((string) config('pterodactyl.wings_internal_url'), '/')
++                : $this->node->getConnectionAddress(),
+             'timeout' => config('pterodactyl.guzzle.timeout'),
+             'connect_timeout' => config('pterodactyl.guzzle.connect_timeout'),
+             'headers' => array_merge($headers, [
+diff --git a/config/pterodactyl.php b/config/pterodactyl.php
+index 23d382a..5fb7bb0 100644
+--- a/config/pterodactyl.php
++++ b/config/pterodactyl.php
+@@ -1,6 +1,9 @@
+ <?php
+ 
+ return [
++    'wings_internal_node_id' => env('PTERODACTYL_WINGS_INTERNAL_NODE_ID', 1),
++    'wings_internal_url' => env('PTERODACTYL_WINGS_INTERNAL_URL'),
++
+     /*
+     |--------------------------------------------------------------------------
+     | Restricted Environment
+diff --git a/resources/scripts/assets/workbench.css b/resources/scripts/assets/workbench.css
+new file mode 100644
+index 0000000..5ff81f9
+--- /dev/null
++++ b/resources/scripts/assets/workbench.css
+@@ -0,0 +1,974 @@
++:root {
++    --wb-bg: #141615;
++    --wb-panel: #1b1e1c;
++    --wb-raised: #242925;
++    --wb-line: #ffffff14;
++    --wb-text: #edf1eb;
++    --wb-muted: #a3ada4;
++    --wb-accent: #b5cba6;
++    --wb-ease: cubic-bezier(0.22, 1, 0.36, 1);
++}
++.wb-quick-search {
++    display: flex;
++    align-items: center;
++    gap: 8px;
++    width: 100%;
++    text-align: left;
++    font-size: 12px;
++    color: var(--wb-muted);
++    min-height: 24px;
++}
++.wb-quick-search svg {
++    width: 16px;
++    height: 16px;
++    flex-shrink: 0;
++}
++.wb-quick-search kbd {
++    margin-left: auto;
++    font-size: 10px;
++    white-space: nowrap;
++    color: var(--wb-muted);
++}
++body {
++    background: var(--wb-bg) !important;
++    color: var(--wb-text);
++    letter-spacing: 0 !important;
++    font-family: 'IBM Plex Sans', sans-serif;
++}
++* {
++    scrollbar-color: #424b43 transparent;
++    scrollbar-width: thin;
++}
++a,
++button {
++    transition: background-color 160ms var(--wb-ease), color 160ms var(--wb-ease), border-color 160ms var(--wb-ease),
++        transform 160ms var(--wb-ease);
++}
++a:focus-visible,
++button:focus-visible,
++input:focus-visible,
++select:focus-visible,
++textarea:focus-visible {
++    outline: 2px solid var(--wb-accent) !important;
++    outline-offset: 4px;
++}
++button:active:not(:disabled) {
++    transform: scale(0.98);
++}
++.wb-nav {
++    position: fixed;
++    inset: 0 auto 0 0;
++    width: 248px;
++    background: #101311;
++    border-right: 1px solid var(--wb-line);
++    padding: 28px 16px;
++    display: flex;
++    flex-direction: column;
++    z-index: 40;
++}
++.wb-brand {
++    display: flex;
++    align-items: center;
++    gap: 12px;
++    padding: 0 12px 32px;
++    color: var(--wb-text);
++    font-size: 18px;
++    font-weight: 500;
++}
++.wb-brand svg {
++    width: 28px;
++    height: 28px;
++    color: var(--wb-accent);
++}
++.wb-nav-caption {
++    color: #929c94;
++    font-size: 12px;
++    margin: 12px 12px 8px;
++}
++.wb-nav-link {
++    display: flex;
++    align-items: center;
++    gap: 12px;
++    padding: 12px;
++    margin: 4px 0;
++    border: 1px solid transparent;
++    border-radius: 8px;
++    color: var(--wb-muted);
++    font-size: 14px;
++    text-align: left;
++    width: 100%;
++    background: transparent;
++}
++.wb-nav-link svg {
++    width: 18px;
++    height: 18px;
++    flex-shrink: 0;
++}
++.wb-nav-link:hover {
++    background: #ffffff06;
++    color: var(--wb-text);
++}
++.wb-nav-link.active {
++    background: var(--wb-raised);
++    border-color: var(--wb-line);
++    color: var(--wb-text);
++}
++.wb-nav-bottom {
++    margin-top: auto;
++}
++.wb-nav-note {
++    margin: 24px 12px 0;
++    padding-top: 20px;
++    border-top: 1px solid var(--wb-line);
++    font-size: 12px;
++    color: #929c94;
++    line-height: 1.7;
++}
++.wb-nav ~ * {
++    margin-left: 248px;
++}
++.wb-nav ~ div > div {
++    max-width: 1440px;
++}
++.wb-search-slot {
++    padding: 8px 12px;
++    margin-bottom: 12px;
++    border: 1px solid var(--wb-line);
++    border-radius: 8px;
++    min-height: 40px;
++}
++.wb-search-slot button {
++    color: var(--wb-muted);
++}
++.wb-heading {
++    display: flex;
++    align-items: flex-start;
++    justify-content: space-between;
++    gap: 24px;
++    margin: 0 0 32px;
++}
++.wb-eyebrow {
++    display: flex;
++    align-items: center;
++    gap: 8px;
++    font-size: 13px;
++    color: var(--wb-muted);
++    margin-bottom: 12px;
++}
++.wb-dot {
++    display: inline-block;
++    width: 6px;
++    height: 6px;
++    border-radius: 50%;
++    background: var(--wb-accent);
++}
++.wb-heading h1 {
++    font-size: 36px;
++    line-height: 1.2;
++    font-weight: 400;
++    margin-bottom: 12px;
++}
++.wb-heading p {
++    color: var(--wb-muted);
++    font-size: 15px;
++    max-width: 560px;
++    line-height: 1.6;
++}
++.wb-heading a {
++    border: 1px solid var(--wb-line);
++    border-radius: 8px;
++    padding: 10px 16px;
++    font-size: 14px;
++    white-space: nowrap;
++    background: var(--wb-panel);
++}
++.wb-summary {
++    display: grid;
++    grid-template-columns: repeat(3, 1fr);
++    border-top: 1px solid var(--wb-line);
++    border-bottom: 1px solid var(--wb-line);
++    margin-bottom: 32px;
++    padding: 24px 0;
++    gap: 24px;
++}
++.wb-summary-label {
++    font-size: 13px;
++    color: var(--wb-muted);
++    margin-bottom: 8px;
++}
++.wb-summary-value {
++    font-size: 28px;
++    line-height: 1;
++    font-weight: 400;
++    font-variant-numeric: tabular-nums;
++}
++.wb-toolbar {
++    display: flex;
++    align-items: center;
++    justify-content: space-between;
++    gap: 16px;
++    margin-bottom: 20px;
++}
++.wb-filter {
++    width: 280px;
++    max-width: 100%;
++    padding: 12px 16px;
++    border: 1px solid var(--wb-line);
++    background: var(--wb-panel);
++    color: var(--wb-text);
++    border-radius: 8px;
++    font-size: 14px;
++}
++.wb-toggle {
++    display: flex;
++    align-items: center;
++    gap: 12px;
++    font-size: 13px;
++    color: var(--wb-muted);
++}
++.wb-server-list {
++    display: grid;
++    gap: 12px;
++}
++.wb-server {
++    display: grid;
++    grid-template-columns: minmax(180px, 1.5fr) minmax(120px, 1fr) repeat(3, minmax(88px, 0.65fr));
++    align-items: center;
++    gap: 24px;
++    padding: 24px;
++    background: var(--wb-panel);
++    border: 1px solid var(--wb-line);
++    border-radius: 12px;
++    color: var(--wb-text);
++    min-width: 0;
++}
++.wb-server:hover {
++    background: #202520;
++    border-color: #ffffff26;
++}
++.wb-server-title {
++    font-size: 18px;
++    font-weight: 500;
++    margin-bottom: 8px;
++    overflow-wrap: anywhere;
++}
++.wb-server-description {
++    font-size: 13px;
++    color: var(--wb-muted);
++    overflow-wrap: anywhere;
++    line-height: 1.5;
++}
++.wb-server-address {
++    font-family: monospace;
++    font-size: 12px;
++    color: var(--wb-muted);
++    overflow-wrap: anywhere;
++}
++.wb-server-state {
++    display: flex;
++    align-items: center;
++    gap: 8px;
++    font-size: 12px;
++    color: var(--wb-muted);
++    margin-top: 12px;
++}
++.wb-server-state[data-state='running'] {
++    color: var(--wb-accent);
++}
++.wb-server-state[data-state='running'] .wb-dot {
++    background: var(--wb-accent);
++}
++.wb-server-state .wb-dot {
++    background: #929c94;
++}
++.wb-metric-label {
++    color: var(--wb-muted);
++    font-size: 12px;
++    margin-bottom: 8px;
++}
++.wb-metric-value {
++    font-size: 16px;
++    font-variant-numeric: tabular-nums;
++    white-space: nowrap;
++}
++.wb-metric-limit {
++    color: var(--wb-muted);
++    font-size: 12px;
++    margin-top: 4px;
++}
++.wb-metric[data-alarm='true'] .wb-metric-value {
++    color: #f38c89;
++}
++.wb-empty {
++    padding: 48px 24px;
++    border: 1px dashed #ffffff26;
++    border-radius: 12px;
++    text-align: center;
++    color: var(--wb-muted);
++}
++.wb-empty h2 {
++    color: var(--wb-text);
++    font-size: 20px;
++    margin-bottom: 12px;
++}
++.wb-footnote {
++    margin: 24px 0;
++    font-size: 12px;
++    color: var(--wb-muted);
++    line-height: 1.7;
++}
++.wb-auth {
++    max-width: 960px;
++    margin: 0 auto;
++    padding: 24px;
++}
++.wb-auth-card {
++    display: grid;
++    grid-template-columns: 1fr 1fr;
++    border: 1px solid var(--wb-line);
++    border-radius: 20px;
++    overflow: hidden;
++    background: var(--wb-panel);
++}
++.wb-auth-story {
++    background: #101311;
++    padding: 48px;
++    display: flex;
++    flex-direction: column;
++    justify-content: space-between;
++    min-height: 480px;
++}
++.wb-auth-story img {
++    width: 56px;
++    opacity: 0.85;
++}
++.wb-auth-story h2 {
++    font-size: 36px;
++    line-height: 1.2;
++    font-weight: 400;
++    margin: 40px 0 20px;
++}
++.wb-auth-story p {
++    font-size: 15px;
++    line-height: 1.7;
++    color: var(--wb-muted);
++}
++.wb-auth-form {
++    padding: 40px;
++    align-self: center;
++}
++.wb-auth-form h1 {
++    font-size: 24px;
++    margin-bottom: 32px;
++}
++.wb-auth-form label {
++    color: var(--wb-muted) !important;
++    text-transform: none !important;
++    font-weight: 400 !important;
++    letter-spacing: 0 !important;
++}
++.wb-auth-form input {
++    background: #141615 !important;
++    border: 1px solid #ffffff26 !important;
++    border-radius: 8px !important;
++    color: var(--wb-text) !important;
++    padding: 12px !important;
++}
++.wb-auth-form button[type='submit'] {
++    background: var(--wb-accent) !important;
++    color: #172013 !important;
++    border: 0;
++    border-radius: 8px;
++    min-height: 44px;
++    width: 100%;
++}
++.wb-auth-form a {
++    color: var(--wb-muted) !important;
++    letter-spacing: 0 !important;
++    text-transform: none !important;
++}
++.wb-auth-footer {
++    text-align: center;
++    padding: 24px;
++    font-size: 12px;
++    color: var(--wb-muted);
++}
++@keyframes wb-enter {
++    from {
++        opacity: 0;
++        transform: translateY(8px);
++    }
++    to {
++        opacity: 1;
++        transform: translateY(0);
++    }
++}
++.wb-auth-card {
++    animation: wb-enter 400ms var(--wb-ease) both;
++}
++@media (max-width: 1100px) {
++    .wb-server {
++        grid-template-columns: minmax(160px, 1.5fr) repeat(3, 1fr);
++        gap: 16px;
++    }
++    .wb-server-address {
++        display: none;
++    }
++    .wb-nav {
++        width: 224px;
++    }
++    .wb-nav ~ * {
++        margin-left: 224px;
++    }
++}
++@media (max-width: 760px) {
++    .wb-nav {
++        position: relative;
++        width: auto;
++        padding: 16px;
++        flex-direction: row;
++        align-items: center;
++        gap: 8px;
++        border-right: 0;
++        border-bottom: 1px solid var(--wb-line);
++        flex-wrap: wrap;
++    }
++    .wb-brand {
++        padding: 0;
++        margin-right: auto;
++    }
++    .wb-brand svg {
++        width: 24px;
++        height: 24px;
++    }
++    .wb-nav-caption,
++    .wb-nav-note,
++    .wb-search-slot {
++        display: none;
++    }
++    .wb-nav-link {
++        width: 40px;
++        height: 40px;
++        padding: 10px;
++        margin: 0;
++    }
++    .wb-nav-link span {
++        display: none;
++    }
++    .wb-nav-bottom {
++        margin: 0;
++        display: flex;
++        gap: 8px;
++    }
++    .wb-nav-links {
++        display: flex;
++        gap: 8px;
++    }
++    .wb-nav ~ * {
++        margin-left: 0;
++    }
++    .wb-heading {
++        flex-direction: column;
++        margin-bottom: 24px;
++    }
++    .wb-heading h1 {
++        font-size: 28px;
++    }
++    .wb-summary {
++        gap: 16px;
++    }
++    .wb-summary-value {
++        font-size: 24px;
++    }
++    .wb-toolbar {
++        align-items: flex-start;
++        flex-direction: column;
++    }
++    .wb-filter {
++        width: 100%;
++    }
++    .wb-server {
++        grid-template-columns: repeat(3, 1fr);
++        padding: 20px;
++        gap: 20px;
++    }
++    .wb-server-identity {
++        grid-column: 1/-1;
++    }
++    .wb-auth {
++        padding: 16px;
++    }
++    .wb-auth-card {
++        grid-template-columns: 1fr;
++    }
++    .wb-auth-story {
++        min-height: 0;
++        padding: 28px;
++    }
++    .wb-auth-story h2 {
++        font-size: 28px;
++        margin: 24px 0 12px;
++    }
++    .wb-auth-form {
++        padding: 28px;
++    }
++    .wb-auth-story p {
++        max-width: 400px;
++    }
++}
++@media (prefers-reduced-motion: reduce) {
++    *,
++    *::before,
++    *::after {
++        animation-duration: 0.01ms !important;
++        animation-iteration-count: 1 !important;
++        transition-duration: 0.01ms !important;
++        scroll-behavior: auto !important;
++    }
++}
++
++/* Worldhouse: the product carries the visual, the controls stay quiet. */
++:root {
++    --wb-bg: #101214;
++    --wb-panel: #181c1e;
++    --wb-raised: #23292b;
++    --wb-text: #f2f5f4;
++    --wb-muted: #a3afb0;
++    --wb-accent: #a5dfb8;
++}
++.wb-nav {
++    background: #0c0f10;
++    width: 240px;
++    padding: 32px 16px;
++}
++.wb-nav ~ * {
++    margin-left: 240px;
++}
++.wb-brand {
++    font-size: 18px;
++    padding-bottom: 36px;
++}
++.wb-nav-link {
++    min-height: 44px;
++}
++.wb-nav-link.active {
++    background: #1d2524;
++    border-color: #a5dfb81a;
++    color: #d9f4e1;
++}
++.wb-nav-link.active svg {
++    color: #a5dfb8;
++}
++.wb-nav-note {
++    color: #849292;
++}
++.wb-search-slot {
++    background: #151a1b;
++    border-color: #ffffff0d;
++}
++.wb-dashboard {
++    max-width: 1440px !important;
++    margin: 40px 32px !important;
++}
++.wb-page-title {
++    display: flex;
++    justify-content: space-between;
++    align-items: center;
++    gap: 24px;
++    margin-bottom: 28px;
++}
++.wb-page-title h1 {
++    font-size: 28px;
++    line-height: 1.2;
++    font-weight: 500;
++}
++.wb-page-title .wb-eyebrow {
++    font-size: 12px;
++    margin-bottom: 8px;
++    color: #8e9a9c;
++}
++.wb-view-count {
++    font-size: 13px;
++    color: var(--wb-muted);
++}
++.wb-world-stage {
++    min-height: 320px;
++    border-radius: 16px;
++    overflow: hidden;
++    position: relative;
++    padding: 40px;
++    background: #172523 url('/assets/workbench-world.png') center 55% / cover;
++    border: 1px solid #ffffff1a;
++    margin-bottom: 36px;
++    isolation: isolate;
++}
++.wb-world-stage:before {
++    content: '';
++    position: absolute;
++    inset: 0;
++    z-index: -1;
++    background: linear-gradient(90deg, rgba(7, 16, 16, 0.92) 0%, rgba(7, 16, 16, 0.68) 32%, rgba(7, 16, 16, 0.08) 72%);
++}
++.wb-world-copy {
++    max-width: 440px;
++}
++.wb-world-tag {
++    display: inline-flex;
++    align-items: center;
++    gap: 8px;
++    color: #d3e6dd;
++    font-size: 12px;
++    margin-bottom: 20px;
++}
++.wb-world-stage h2 {
++    font-size: 48px;
++    font-weight: 400;
++    line-height: 1.04;
++    letter-spacing: -0.025em;
++    color: #f6fbf8;
++    margin-bottom: 20px;
++}
++.wb-world-stage p {
++    font-size: 14px;
++    line-height: 1.6;
++    color: #bccbc6;
++}
++.wb-world-action {
++    display: inline-flex;
++    align-items: center;
++    gap: 24px;
++    padding: 12px 16px;
++    background: #e2f2e7;
++    border: 1px solid #ffffff40;
++    border-radius: 8px;
++    color: #16231c;
++    font-size: 13px;
++    font-weight: 500;
++    margin-top: 24px;
++}
++.wb-world-action:hover {
++    background: white;
++}
++.wb-world-action span {
++    transition: transform 180ms var(--wb-ease);
++}
++.wb-world-action:hover span {
++    transform: translate(2px, -2px);
++}
++.wb-world-caption {
++    position: absolute;
++    bottom: 24px;
++    right: 28px;
++    color: #ecf6ef;
++    font-size: 11px;
++    text-shadow: 0 1px 4px #000;
++}
++.wb-library-heading {
++    display: flex;
++    justify-content: space-between;
++    align-items: center;
++    margin-bottom: 20px;
++    gap: 16px;
++}
++.wb-library-heading h2 {
++    font-size: 19px;
++    font-weight: 500;
++}
++.wb-library-heading h2 span {
++    display: inline-block;
++    padding: 2px 8px;
++    border: 1px solid var(--wb-line);
++    border-radius: 6px;
++    font-size: 12px;
++    margin-left: 8px;
++    color: var(--wb-muted);
++}
++.wb-library-heading p {
++    font-size: 12px;
++    color: var(--wb-muted);
++}
++.wb-toolbar {
++    margin-bottom: 16px;
++}
++.wb-filter {
++    font-size: 13px;
++    padding: 10px 14px;
++    border-radius: 8px;
++    background: #14181a;
++}
++.wb-server {
++    padding: 28px;
++    border-radius: 12px;
++    background: #171b1d;
++    min-height: 160px;
++}
++.wb-server-title {
++    font-size: 21px;
++    font-weight: 500;
++}
++.wb-server-description {
++    color: #9ba8a9;
++}
++.wb-server-state {
++    font-size: 12px;
++}
++.wb-server-address {
++    color: #8d9e9c;
++}
++.wb-metric-value {
++    font-size: 20px;
++}
++.wb-metric-label {
++    color: #94a1a2;
++}
++.wb-metric-limit {
++    margin-top: 8px;
++    font-size: 11px;
++    color: #849395;
++}
++.wb-footnote {
++    color: #849395;
++}
++.wb-server:hover {
++    background: #1c2324;
++    border-color: #a5dfb833;
++}
++.wb-auth {
++    max-width: 1120px;
++    padding: 24px;
++}
++.wb-auth-card {
++    grid-template-columns: 1.15fr 1fr;
++    border-radius: 20px;
++    min-height: 620px;
++    background: #15191b;
++}
++.wb-auth-story {
++    padding: 40px;
++    background: #14231d url('/assets/workbench-world.png') 65% center/cover;
++    position: relative;
++    isolation: isolate;
++    min-height: 620px;
++}
++.wb-auth-story:before {
++    content: '';
++    position: absolute;
++    inset: 0;
++    z-index: -1;
++    background: linear-gradient(180deg, #06141030, #06141030 20%, #061410e6 90%);
++}
++.wb-auth-brand {
++    display: flex;
++    gap: 10px;
++    align-items: center;
++    font-size: 17px;
++    font-weight: 500;
++    color: #f4f8f6;
++}
++.wb-auth-brand svg {
++    width: 24px;
++    height: 24px;
++}
++.wb-auth-story h2 {
++    font-size: 44px;
++    font-weight: 400;
++    line-height: 1.08;
++    letter-spacing: -0.025em;
++    color: #f4faf7;
++}
++.wb-auth-story p {
++    color: #d2dfd6;
++    max-width: 320px;
++    font-size: 14px;
++}
++.wb-auth-story .wb-eyebrow {
++    color: #d2dfd6;
++}
++.wb-auth-form {
++    padding: 48px;
++}
++.wb-auth-form h1 {
++    font-size: 26px;
++    line-height: 1.3;
++    margin-bottom: 36px;
++    font-weight: 400;
++}
++.wb-auth-form button[type='submit'] {
++    text-transform: none !important;
++    font-weight: 500 !important;
++    letter-spacing: 0 !important;
++    background: #c2e8ce !important;
++}
++.wb-auth-form input {
++    background: #101416 !important;
++}
++.wb-auth-footer {
++    color: #849395;
++}
++@media (max-width: 1100px) {
++    .wb-nav {
++        width: 216px;
++    }
++    .wb-nav ~ * {
++        margin-left: 216px;
++    }
++    .wb-server {
++        gap: 16px;
++        padding: 24px;
++    }
++    .wb-quick-search kbd {
++        display: none;
++    }
++    .wb-world-stage {
++        padding: 32px;
++    }
++    .wb-world-stage h2 {
++        font-size: 40px;
++    }
++}
++@media (max-width: 760px) {
++    .wb-nav {
++        width: auto;
++        padding: 16px;
++    }
++    .wb-nav ~ * {
++        margin-left: 0;
++    }
++    .wb-brand {
++        padding: 0;
++    }
++    .wb-dashboard {
++        margin: 28px 16px !important;
++    }
++    .wb-page-title {
++        margin-bottom: 20px;
++    }
++    .wb-page-title h1 {
++        font-size: 24px;
++    }
++    .wb-view-count {
++        display: none;
++    }
++    .wb-world-stage {
++        min-height: 340px;
++        padding: 28px;
++        margin-bottom: 28px;
++        background-position: 65% center;
++    }
++    .wb-world-stage:before {
++        background: linear-gradient(90deg, #071010da, #07101066);
++    }
++    .wb-world-stage h2 {
++        font-size: 40px;
++    }
++    .wb-world-caption {
++        display: none;
++    }
++    .wb-library-heading {
++        display: block;
++    }
++    .wb-library-heading p {
++        margin-top: 8px;
++    }
++    .wb-server {
++        padding: 20px;
++    }
++    .wb-metric-value {
++        font-size: 18px;
++    }
++    .wb-auth-card {
++        grid-template-columns: 1fr;
++        min-height: 0;
++    }
++    .wb-auth-story {
++        min-height: 260px;
++        padding: 28px;
++    }
++    .wb-auth-story h2 {
++        font-size: 36px;
++        margin: 24px 0 12px;
++    }
++    .wb-auth-story > p {
++        display: none;
++    }
++    .wb-auth-form {
++        padding: 32px 28px;
++    }
++    .wb-auth-form h1 {
++        font-size: 24px;
++        margin-bottom: 28px;
++    }
++}
++
++.wb-action-arrow {
++    width: 16px;
++    height: 16px;
++    transition: transform 180ms var(--wb-ease);
++}
++.wb-world-action:hover .wb-action-arrow {
++    transform: translateX(3px);
++}
++@keyframes wb-world-reveal {
++    from {
++        opacity: 0;
++        transform: translateY(8px);
++    }
++    to {
++        opacity: 1;
++        transform: translateY(0);
++    }
++}
++.wb-world-stage {
++    animation: wb-world-reveal 480ms var(--wb-ease) both;
++}
++
++.wb-nav ~ * {
++    max-width: calc(100% - 240px);
++}
++.wb-console-page {
++    max-width: 1440px !important;
++    margin: 32px !important;
++}
++.wb-stat-value {
++    font-size: 18px;
++    font-weight: 500;
++    color: var(--wb-text);
++    white-space: nowrap;
++    font-variant-numeric: tabular-nums;
++    overflow: hidden;
++    text-overflow: ellipsis;
++}
++.wb-power-controls button {
++    min-height: 40px;
++    border-radius: 8px;
++    font-size: 13px;
++    font-weight: 500;
++    background: #22292b;
++    border: 1px solid #ffffff18;
++    color: #e6eeea;
++}
++.wb-power-controls button:first-of-type {
++    background: #c2e8ce;
++    color: #18281e;
++}
++.wb-power-controls button:last-of-type {
++    background: #2b2022;
++    color: #f0b4b1;
++    border-color: #de8d8d30;
++}
++.wb-power-controls button:hover:not(:disabled) {
++    filter: brightness(1.08);
++}
++@media (max-width: 1100px) {
++    .wb-nav ~ * {
++        max-width: calc(100% - 216px);
++    }
++}
++@media (max-width: 760px) {
++    .wb-nav ~ * {
++        max-width: 100%;
++    }
++    .wb-console-page {
++        margin: 24px 16px !important;
++    }
++}
+diff --git a/resources/scripts/components/App.tsx b/resources/scripts/components/App.tsx
+index 9354000..83b4f70 100644
+--- a/resources/scripts/components/App.tsx
++++ b/resources/scripts/components/App.tsx
+@@ -13,6 +13,7 @@ import { setupInterceptors } from '@/api/interceptors';
+ import AuthenticatedRoute from '@/components/elements/AuthenticatedRoute';
+ import { ServerContext } from '@/state/server';
+ import '@/assets/tailwind.css';
++import '@/assets/workbench.css';
+ import Spinner from '@/components/elements/Spinner';
+ 
+ const DashboardRouter = lazy(() => import(/* webpackChunkName: "dashboard" */ '@/routers/DashboardRouter'));
+diff --git a/resources/scripts/components/NavigationBar.tsx b/resources/scripts/components/NavigationBar.tsx
+index 6142f62..8fe85a3 100644
+--- a/resources/scripts/components/NavigationBar.tsx
++++ b/resources/scripts/components/NavigationBar.tsx
+@@ -1,92 +1,60 @@
+-import * as React from 'react';
+-import { useState } from 'react';
++import React, { useState } from 'react';
+ import { Link, NavLink } from 'react-router-dom';
+-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+-import { faCogs, faLayerGroup, faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
++import { CubeIcon, ServerIcon, AdjustmentsIcon, UserCircleIcon, LogoutIcon } from '@heroicons/react/outline';
+ import { useStoreState } from 'easy-peasy';
+ import { ApplicationStore } from '@/state';
+ import SearchContainer from '@/components/dashboard/search/SearchContainer';
+-import tw, { theme } from 'twin.macro';
+-import styled from 'styled-components/macro';
+ import http from '@/api/http';
+ import SpinnerOverlay from '@/components/elements/SpinnerOverlay';
+-import Tooltip from '@/components/elements/tooltip/Tooltip';
+-import Avatar from '@/components/Avatar';
+-
+-const RightNavigation = styled.div`
+-    & > a,
+-    & > button,
+-    & > .navigation-link {
+-        ${tw`flex items-center h-full no-underline text-neutral-300 px-6 cursor-pointer transition-all duration-150`};
+-
+-        &:active,
+-        &:hover {
+-            ${tw`text-neutral-100 bg-black`};
+-        }
+-
+-        &:active,
+-        &:hover,
+-        &.active {
+-            box-shadow: inset 0 -2px ${theme`colors.cyan.600`.toString()};
+-        }
+-    }
+-`;
+ 
+ export default () => {
+     const name = useStoreState((state: ApplicationStore) => state.settings.data!.name);
+     const rootAdmin = useStoreState((state: ApplicationStore) => state.user.data!.rootAdmin);
+     const [isLoggingOut, setIsLoggingOut] = useState(false);
+-
+-    const onTriggerLogout = () => {
++    const logout = () => {
+         setIsLoggingOut(true);
+-        http.post('/auth/logout').finally(() => {
+-            // @ts-expect-error this is valid
+-            window.location = '/';
+-        });
++        http.post('/auth/logout')
++            .then(() => window.location.assign('/'))
++            .catch(() => setIsLoggingOut(false));
+     };
+-
+     return (
+-        <div className={'w-full bg-neutral-900 shadow-md overflow-x-auto'}>
++        <nav className='wb-nav' aria-label='Main navigation'>
+             <SpinnerOverlay visible={isLoggingOut} />
+-            <div className={'mx-auto w-full flex items-center h-[3.5rem] max-w-[1200px]'}>
+-                <div id={'logo'} className={'flex-1'}>
+-                    <Link
+-                        to={'/'}
+-                        className={
+-                            'text-2xl font-header font-medium px-4 no-underline text-neutral-200 hover:text-neutral-100 transition-colors duration-150'
+-                        }
+-                    >
+-                        {name}
+-                    </Link>
+-                </div>
+-                <RightNavigation className={'flex h-full items-center justify-center'}>
+-                    <SearchContainer />
+-                    <Tooltip placement={'bottom'} content={'Dashboard'}>
+-                        <NavLink to={'/'} exact>
+-                            <FontAwesomeIcon icon={faLayerGroup} />
+-                        </NavLink>
+-                    </Tooltip>
+-                    {rootAdmin && (
+-                        <Tooltip placement={'bottom'} content={'Admin'}>
+-                            <a href={'/admin'} rel={'noreferrer'}>
+-                                <FontAwesomeIcon icon={faCogs} />
+-                            </a>
+-                        </Tooltip>
+-                    )}
+-                    <Tooltip placement={'bottom'} content={'Account Settings'}>
+-                        <NavLink to={'/account'}>
+-                            <span className={'flex items-center w-5 h-5'}>
+-                                <Avatar.User />
+-                            </span>
+-                        </NavLink>
+-                    </Tooltip>
+-                    <Tooltip placement={'bottom'} content={'Sign Out'}>
+-                        <button onClick={onTriggerLogout}>
+-                            <FontAwesomeIcon icon={faSignOutAlt} />
+-                        </button>
+-                    </Tooltip>
+-                </RightNavigation>
++            <Link className='wb-brand' to='/'>
++                <CubeIcon aria-hidden='true' />
++                {name}
++            </Link>
++            <div className='wb-search-slot'>
++                <SearchContainer />
++            </div>
++            <p className='wb-nav-caption'>Workspace</p>
++            <div className='wb-nav-links'>
++                <NavLink className='wb-nav-link' to='/' exact aria-label='Servers'>
++                    <ServerIcon aria-hidden='true' />
++                    <span>Servers</span>
++                </NavLink>
++                {rootAdmin && (
++                    <a className='wb-nav-link' href='/admin' aria-label='Administration'>
++                        <AdjustmentsIcon aria-hidden='true' />
++                        <span>Administration</span>
++                    </a>
++                )}
++            </div>
++            <div className='wb-nav-bottom'>
++                <NavLink className='wb-nav-link' to='/account' aria-label='Account settings'>
++                    <UserCircleIcon aria-hidden='true' />
++                    <span>Account settings</span>
++                </NavLink>
++                <button className='wb-nav-link' onClick={logout} aria-label='Sign out' disabled={isLoggingOut}>
++                    <LogoutIcon aria-hidden='true' />
++                    <span>Sign out</span>
++                </button>
++                <p className='wb-nav-note'>
++                    Pterodactyl Panel
++                    <br />
++                    Your servers. One workspace.
++                </p>
+             </div>
+-        </div>
++        </nav>
+     );
+ };
+diff --git a/resources/scripts/components/auth/LoginContainer.tsx b/resources/scripts/components/auth/LoginContainer.tsx
+index 453a27e..a4cdf07 100644
+--- a/resources/scripts/components/auth/LoginContainer.tsx
++++ b/resources/scripts/components/auth/LoginContainer.tsx
+@@ -74,7 +74,7 @@ const LoginContainer = ({ history }: RouteComponentProps) => {
+             })}
+         >
+             {({ isSubmitting, setSubmitting, submitForm }) => (
+-                <LoginFormContainer title={'Login to Continue'} css={tw`w-full flex`}>
++                <LoginFormContainer title={'Sign in to your panel'}>
+                     <Field light type={'text'} label={'Username or Email'} name={'username'} disabled={isSubmitting} />
+                     <div css={tw`mt-6`}>
+                         <Field light type={'password'} label={'Password'} name={'password'} disabled={isSubmitting} />
+diff --git a/resources/scripts/components/auth/LoginFormContainer.tsx b/resources/scripts/components/auth/LoginFormContainer.tsx
+index 6274981..12add8b 100644
+--- a/resources/scripts/components/auth/LoginFormContainer.tsx
++++ b/resources/scripts/components/auth/LoginFormContainer.tsx
+@@ -1,55 +1,45 @@
+ import React, { forwardRef } from 'react';
+ import { Form } from 'formik';
+-import styled from 'styled-components/macro';
+-import { breakpoint } from '@/theme';
++import { CubeIcon } from '@heroicons/react/outline';
+ import FlashMessageRender from '@/components/FlashMessageRender';
+-import tw from 'twin.macro';
+ 
+-type Props = React.DetailedHTMLProps<React.FormHTMLAttributes<HTMLFormElement>, HTMLFormElement> & {
+-    title?: string;
+-};
++type Props = React.DetailedHTMLProps<React.FormHTMLAttributes<HTMLFormElement>, HTMLFormElement> & { title?: string };
+ 
+-const Container = styled.div`
+-    ${breakpoint('sm')`
+-        ${tw`w-4/5 mx-auto`}
+-    `};
+-
+-    ${breakpoint('md')`
+-        ${tw`p-10`}
+-    `};
+-
+-    ${breakpoint('lg')`
+-        ${tw`w-3/5`}
+-    `};
+-
+-    ${breakpoint('xl')`
+-        ${tw`w-full`}
+-        max-width: 700px;
+-    `};
+-`;
+-
+-export default forwardRef<HTMLFormElement, Props>(({ title, ...props }, ref) => (
+-    <Container>
+-        {title && <h2 css={tw`text-3xl text-center text-neutral-100 font-medium py-4`}>{title}</h2>}
+-        <FlashMessageRender css={tw`mb-2 px-1`} />
++export default forwardRef<HTMLFormElement, Props>(({ title, children, ...props }, ref) => (
++    <div className='wb-auth'>
++        <FlashMessageRender />
+         <Form {...props} ref={ref}>
+-            <div css={tw`md:flex w-full bg-white shadow-lg rounded-lg p-6 md:pl-0 mx-1`}>
+-                <div css={tw`flex-none select-none mb-6 md:mb-0 self-center`}>
+-                    <img src={'/assets/svgs/pterodactyl.svg'} css={tw`block w-48 md:w-64 mx-auto`} />
++            <div className='wb-auth-card'>
++                <div className='wb-auth-story'>
++                    <div className='wb-auth-brand'>
++                        <CubeIcon aria-hidden='true' />
++                        Pterodactyl
++                    </div>
++                    <div>
++                        <span className='wb-eyebrow'>
++                            <i className='wb-dot' />
++                            Pterodactyl Panel
++                        </span>
++                        <h2>
++                            Your worlds,
++                            <br />
++                            under control.
++                        </h2>
++                        <p>Console, files, backups, and the details that keep your game servers running.</p>
++                    </div>
++                    <p>Made for the worlds you build.</p>
++                </div>
++                <div className='wb-auth-form'>
++                    {title && <h1>{title}</h1>}
++                    {children}
+                 </div>
+-                <div css={tw`flex-1`}>{props.children}</div>
+             </div>
+         </Form>
+-        <p css={tw`text-center text-neutral-500 text-xs mt-4`}>
+-            &copy; 2015 - {new Date().getFullYear()}&nbsp;
+-            <a
+-                rel={'noopener nofollow noreferrer'}
+-                href={'https://pterodactyl.io'}
+-                target={'_blank'}
+-                css={tw`no-underline text-neutral-500 hover:text-neutral-300`}
+-            >
++        <p className='wb-auth-footer'>
++            &copy; 2015&ndash;{new Date().getFullYear()}{' '}
++            <a href='https://pterodactyl.io' rel='noreferrer' target='_blank'>
+                 Pterodactyl Software
+             </a>
+         </p>
+-    </Container>
++    </div>
+ ));
+diff --git a/resources/scripts/components/dashboard/DashboardContainer.tsx b/resources/scripts/components/dashboard/DashboardContainer.tsx
+index 23ad2e3..c3dad3b 100644
+--- a/resources/scripts/components/dashboard/DashboardContainer.tsx
++++ b/resources/scripts/components/dashboard/DashboardContainer.tsx
+@@ -8,14 +8,17 @@ import useFlash from '@/plugins/useFlash';
+ import { useStoreState } from 'easy-peasy';
+ import { usePersistedState } from '@/plugins/usePersistedState';
+ import Switch from '@/components/elements/Switch';
+-import tw from 'twin.macro';
+ import useSWR from 'swr';
+ import { PaginatedResult } from '@/api/http';
+ import Pagination from '@/components/elements/Pagination';
+ import { useLocation } from 'react-router-dom';
++import { motion, useReducedMotion } from 'framer-motion';
++import { ArrowRightIcon } from '@heroicons/react/outline';
+ 
+ export default () => {
+     const { search } = useLocation();
++    const [filter, setFilter] = useState('');
++    const reduced = useReducedMotion();
+     const defaultPage = Number(new URLSearchParams(search).get('page') || '1');
+ 
+     const [page, setPage] = useState(!isNaN(defaultPage) && defaultPage > 0 ? defaultPage : 1);
+@@ -53,38 +56,112 @@ export default () => {
+     }, [error]);
+ 
+     return (
+-        <PageContentBlock title={'Dashboard'} showFlashKey={'dashboard'}>
+-            {rootAdmin && (
+-                <div css={tw`mb-2 flex justify-end items-center`}>
+-                    <p css={tw`uppercase text-xs text-neutral-400 mr-2`}>
+-                        {showOnlyAdmin ? "Showing others' servers" : 'Showing your servers'}
++        <PageContentBlock title={'Server overview'} showFlashKey={'dashboard'} className={'wb-dashboard'}>
++            <header className='wb-page-title'>
++                <div>
++                    <span className='wb-eyebrow'>Pterodactyl / Workspace</span>
++                    <h1>Server overview</h1>
++                </div>
++                <span className='wb-view-count'>{servers?.pagination.total ?? '—'} servers in your workspace</span>
++            </header>
++            <section className='wb-world-stage' aria-label='Minecraft workspace'>
++                <div className='wb-world-copy'>
++                    <span className='wb-world-tag'>
++                        <i className='wb-dot' />
++                        Your Minecraft workspace
++                    </span>
++                    <h2>
++                        Your worlds.
++                        <br />
++                        Under control.
++                    </h2>
++                    <p>
++                        The console, the files, the next big idea.
++                        <br />
++                        Everything your server needs, together.
+                     </p>
+-                    <Switch
+-                        name={'show_all_servers'}
+-                        defaultChecked={showOnlyAdmin}
+-                        onChange={() => setShowOnlyAdmin((s) => !s)}
+-                    />
++                    {servers?.items[0] ? (
++                        <a className='wb-world-action' href={'/server/' + servers.items[0].id}>
++                            Open your server <ArrowRightIcon aria-hidden='true' className='wb-action-arrow' />
++                        </a>
++                    ) : rootAdmin ? (
++                        <a className='wb-world-action' href='/admin/servers/new'>
++                            Create a server <ArrowRightIcon aria-hidden='true' className='wb-action-arrow' />
++                        </a>
++                    ) : null}
+                 </div>
+-            )}
++                <span className='wb-world-caption'>A little space for something great</span>
++            </section>
++            <div className='wb-library-heading'>
++                <h2>
++                    Your servers <span>{servers?.pagination.total ?? '—'}</span>
++                </h2>
++                <p>Select a world to open its console</p>
++            </div>
++            <div className='wb-toolbar'>
++                <input
++                    className='wb-filter'
++                    type='search'
++                    aria-label='Filter servers on this page'
++                    placeholder='Filter this page'
++                    value={filter}
++                    onChange={(event) => setFilter(event.target.value)}
++                />
++                {rootAdmin && (
++                    <div className='wb-toggle'>
++                        <span>{showOnlyAdmin ? 'Othersâ€™ servers' : 'Your servers'}</span>
++                        <Switch
++                            name='show_all_servers'
++                            defaultChecked={showOnlyAdmin}
++                            onChange={() => setShowOnlyAdmin((s) => !s)}
++                        />
++                    </div>
++                )}
++            </div>
+             {!servers ? (
+                 <Spinner centered size={'large'} />
+             ) : (
+                 <Pagination data={servers} onPageSelect={setPage}>
+-                    {({ items }) =>
+-                        items.length > 0 ? (
+-                            items.map((server, index) => (
+-                                <ServerRow key={server.uuid} server={server} css={index > 0 ? tw`mt-2` : undefined} />
+-                            ))
++                    {({ items }) => {
++                        const visible = items.filter((server) =>
++                            (server.name + ' ' + server.description).toLowerCase().includes(filter.toLowerCase())
++                        );
++                        return visible.length ? (
++                            <div className='wb-server-list'>
++                                {visible.map((server, index) => (
++                                    <motion.div
++                                        key={server.uuid}
++                                        initial={reduced ? false : { opacity: 0, y: 8 }}
++                                        animate={{ opacity: 1, y: 0 }}
++                                        transition={{
++                                            duration: 0.32,
++                                            delay: reduced ? 0 : Math.min(index, 5) * 0.04,
++                                            ease: [0.22, 1, 0.36, 1],
++                                        }}
++                                    >
++                                        <ServerRow server={server} />
++                                    </motion.div>
++                                ))}
++                            </div>
+                         ) : (
+-                            <p css={tw`text-center text-sm text-neutral-400`}>
+-                                {showOnlyAdmin
+-                                    ? 'There are no other servers to display.'
+-                                    : 'There are no servers associated with your account.'}
+-                            </p>
+-                        )
+-                    }
++                            <div className='wb-empty'>
++                                <h2>{filter ? 'No matching servers' : 'Your next world starts here'}</h2>
++                                <p>
++                                    {filter
++                                        ? 'Try another name or clear the filter.'
++                                        : showOnlyAdmin
++                                        ? 'There are no other servers to display.'
++                                        : 'No servers are associated with your account yet.'}
++                                </p>
++                                {!filter && rootAdmin && <a href='/admin/servers/new'>Create your first server â†’</a>}
++                            </div>
++                        );
++                    }}
+                 </Pagination>
+             )}
++            <p className='wb-footnote'>
++                Resource readings refresh every 30 seconds. Open a server for its live console.
++            </p>
+         </PageContentBlock>
+     );
+ };
+diff --git a/resources/scripts/components/dashboard/ServerRow.tsx b/resources/scripts/components/dashboard/ServerRow.tsx
+index aa2b5a7..0e06092 100644
+--- a/resources/scripts/components/dashboard/ServerRow.tsx
++++ b/resources/scripts/components/dashboard/ServerRow.tsx
+@@ -1,182 +1,90 @@
+-import React, { memo, useEffect, useRef, useState } from 'react';
+-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+-import { faEthernet, faHdd, faMemory, faMicrochip, faServer } from '@fortawesome/free-solid-svg-icons';
++import React, { useEffect, useState } from 'react';
+ import { Link } from 'react-router-dom';
+ import { Server } from '@/api/server/getServer';
+-import getServerResourceUsage, { ServerPowerState, ServerStats } from '@/api/server/getServerResourceUsage';
++import getServerResourceUsage, { ServerStats } from '@/api/server/getServerResourceUsage';
+ import { bytesToString, ip, mbToBytes } from '@/lib/formatters';
+-import tw from 'twin.macro';
+-import GreyRowBox from '@/components/elements/GreyRowBox';
+-import Spinner from '@/components/elements/Spinner';
+-import styled from 'styled-components/macro';
+-import isEqual from 'react-fast-compare';
+-
+-// Determines if the current value is in an alarm threshold so we can show it in red rather
+-// than the more faded default style.
+-const isAlarmState = (current: number, limit: number): boolean => limit > 0 && current / (limit * 1024 * 1024) >= 0.9;
+-
+-const Icon = memo(
+-    styled(FontAwesomeIcon)<{ $alarm: boolean }>`
+-        ${(props) => (props.$alarm ? tw`text-red-400` : tw`text-neutral-500`)};
+-    `,
+-    isEqual
+-);
+-
+-const IconDescription = styled.p<{ $alarm: boolean }>`
+-    ${tw`text-sm ml-2`};
+-    ${(props) => (props.$alarm ? tw`text-white` : tw`text-neutral-400`)};
+-`;
+-
+-const StatusIndicatorBox = styled(GreyRowBox)<{ $status: ServerPowerState | undefined }>`
+-    ${tw`grid grid-cols-12 gap-4 relative`};
+-
+-    & .status-bar {
+-        ${tw`w-2 bg-red-500 absolute right-0 z-20 rounded-full m-1 opacity-50 transition-all duration-150`};
+-        height: calc(100% - 0.5rem);
+-
+-        ${({ $status }) =>
+-            !$status || $status === 'offline'
+-                ? tw`bg-red-500`
+-                : $status === 'running'
+-                ? tw`bg-green-500`
+-                : tw`bg-yellow-500`};
+-    }
+-
+-    &:hover .status-bar {
+-        ${tw`opacity-75`};
+-    }
+-`;
+-
+-type Timer = ReturnType<typeof setInterval>;
+ 
+ export default ({ server, className }: { server: Server; className?: string }) => {
+-    const interval = useRef<Timer>(null) as React.MutableRefObject<Timer>;
+-    const [isSuspended, setIsSuspended] = useState(server.status === 'suspended');
+     const [stats, setStats] = useState<ServerStats | null>(null);
+-
+-    const getStats = () =>
+-        getServerResourceUsage(server.uuid)
+-            .then((data) => setStats(data))
+-            .catch((error) => console.error(error));
+-
++    const [failed, setFailed] = useState(false);
++    const suspended = server.status === 'suspended' || stats?.isSuspended;
+     useEffect(() => {
+-        setIsSuspended(stats?.isSuspended || server.status === 'suspended');
+-    }, [stats?.isSuspended, server.status]);
+-
+-    useEffect(() => {
+-        // Don't waste a HTTP request if there is nothing important to show to the user because
+-        // the server is suspended.
+-        if (isSuspended || server.isNodeUnderMaintenance) return;
+-
+-        getStats().then(() => {
+-            interval.current = setInterval(() => getStats(), 30000);
+-        });
+-
++        let active = true;
++        if (suspended || server.isNodeUnderMaintenance) return;
++        const refresh = () =>
++            getServerResourceUsage(server.uuid)
++                .then((data) => {
++                    if (active) {
++                        setStats(data);
++                        setFailed(false);
++                    }
++                })
++                .catch(() => {
++                    if (active) setFailed(true);
++                });
++        refresh();
++        const interval = setInterval(refresh, 30000);
+         return () => {
+-            interval.current && clearInterval(interval.current);
++            active = false;
++            clearInterval(interval);
+         };
+-    }, [isSuspended, server.isNodeUnderMaintenance]);
+-
+-    const alarms = { cpu: false, memory: false, disk: false };
+-    if (stats) {
+-        alarms.cpu = server.limits.cpu === 0 ? false : stats.cpuUsagePercent >= server.limits.cpu * 0.9;
+-        alarms.memory = isAlarmState(stats.memoryUsageInBytes, server.limits.memory);
+-        alarms.disk = server.limits.disk === 0 ? false : isAlarmState(stats.diskUsageInBytes, server.limits.disk);
+-    }
+-
+-    const diskLimit = server.limits.disk !== 0 ? bytesToString(mbToBytes(server.limits.disk)) : 'Unlimited';
+-    const memoryLimit = server.limits.memory !== 0 ? bytesToString(mbToBytes(server.limits.memory)) : 'Unlimited';
+-    const cpuLimit = server.limits.cpu !== 0 ? server.limits.cpu + ' %' : 'Unlimited';
+-
++    }, [server.uuid, suspended, server.isNodeUnderMaintenance]);
++    const status = suspended
++        ? 'Suspended'
++        : server.isNodeUnderMaintenance
++        ? 'Maintenance'
++        : server.isTransferring
++        ? 'Transferring'
++        : server.status
++        ? server.status.replace(/_/g, ' ')
++        : failed
++        ? 'Connection unavailable'
++        : stats?.status || 'Connecting';
++    const unavailable = suspended || server.isNodeUnderMaintenance || failed || !stats;
++    const metric = (label: string, value: string, limit: string, alarm: boolean) => (
++        <div className='wb-metric' data-alarm={alarm}>
++            <div className='wb-metric-label'>{label}</div>
++            <div className='wb-metric-value'>{unavailable ? '—' : value}</div>
++            <div className='wb-metric-limit'>of {limit}</div>
++        </div>
++    );
+     return (
+-        <StatusIndicatorBox as={Link} to={`/server/${server.id}`} className={className} $status={stats?.status}>
+-            <div css={tw`flex items-center col-span-12 sm:col-span-5 lg:col-span-6`}>
+-                <div className={'icon mr-4'}>
+-                    <FontAwesomeIcon icon={faServer} />
+-                </div>
+-                <div>
+-                    <p css={tw`text-lg break-words`}>{server.name}</p>
+-                    {!!server.description && (
+-                        <p css={tw`text-sm text-neutral-300 break-words line-clamp-2`}>{server.description}</p>
+-                    )}
++        <Link to={'/server/' + server.id} className={'wb-server ' + (className || '')}>
++            <div className='wb-server-identity'>
++                <h2 className='wb-server-title'>{server.name}</h2>
++                <p className='wb-server-description'>{server.description || 'Game server'}</p>
++                <div className='wb-server-state' data-state={unavailable ? 'unknown' : stats?.status}>
++                    <i className='wb-dot' />
++                    {status}
+                 </div>
+             </div>
+-            <div css={tw`flex-1 ml-4 lg:block lg:col-span-2 hidden`}>
+-                <div css={tw`flex justify-center`}>
+-                    <FontAwesomeIcon icon={faEthernet} css={tw`text-neutral-500`} />
+-                    <p css={tw`text-sm text-neutral-400 ml-2`}>
+-                        {server.allocations
+-                            .filter((alloc) => alloc.isDefault)
+-                            .map((allocation) => (
+-                                <React.Fragment key={allocation.ip + allocation.port.toString()}>
+-                                    {allocation.alias || ip(allocation.ip)}:{allocation.port}
+-                                </React.Fragment>
+-                            ))}
+-                    </p>
+-                </div>
+-            </div>
+-            <div css={tw`hidden col-span-7 lg:col-span-4 sm:flex items-baseline justify-center`}>
+-                {!stats || isSuspended || server.isNodeUnderMaintenance ? (
+-                    isSuspended ? (
+-                        <div css={tw`flex-1 text-center`}>
+-                            <span css={tw`bg-red-500 rounded px-2 py-1 text-red-100 text-xs`}>
+-                                {server.status === 'suspended' ? 'Suspended' : 'Connection Error'}
+-                            </span>
+-                        </div>
+-                    ) : server.isNodeUnderMaintenance ? (
+-                        <div css={tw`flex-1 text-center`}>
+-                            <span css={tw`bg-yellow-500 rounded px-2 py-1 text-yellow-100 text-xs`}>
+-                                Under Maintenance
+-                            </span>
+-                        </div>
+-                    ) : server.isTransferring || server.status ? (
+-                        <div css={tw`flex-1 text-center`}>
+-                            <span css={tw`bg-neutral-500 rounded px-2 py-1 text-neutral-100 text-xs`}>
+-                                {server.isTransferring
+-                                    ? 'Transferring'
+-                                    : server.status === 'installing'
+-                                    ? 'Installing'
+-                                    : server.status === 'restoring_backup'
+-                                    ? 'Restoring Backup'
+-                                    : 'Unavailable'}
+-                            </span>
+-                        </div>
+-                    ) : (
+-                        <Spinner size={'small'} />
+-                    )
+-                ) : (
+-                    <React.Fragment>
+-                        <div css={tw`flex-1 ml-4 sm:block hidden`}>
+-                            <div css={tw`flex justify-center`}>
+-                                <Icon icon={faMicrochip} $alarm={alarms.cpu} />
+-                                <IconDescription $alarm={alarms.cpu}>
+-                                    {stats.cpuUsagePercent.toFixed(2)} %
+-                                </IconDescription>
+-                            </div>
+-                            <p css={tw`text-xs text-neutral-600 text-center mt-1`}>of {cpuLimit}</p>
+-                        </div>
+-                        <div css={tw`flex-1 ml-4 sm:block hidden`}>
+-                            <div css={tw`flex justify-center`}>
+-                                <Icon icon={faMemory} $alarm={alarms.memory} />
+-                                <IconDescription $alarm={alarms.memory}>
+-                                    {bytesToString(stats.memoryUsageInBytes)}
+-                                </IconDescription>
+-                            </div>
+-                            <p css={tw`text-xs text-neutral-600 text-center mt-1`}>of {memoryLimit}</p>
+-                        </div>
+-                        <div css={tw`flex-1 ml-4 sm:block hidden`}>
+-                            <div css={tw`flex justify-center`}>
+-                                <Icon icon={faHdd} $alarm={alarms.disk} />
+-                                <IconDescription $alarm={alarms.disk}>
+-                                    {bytesToString(stats.diskUsageInBytes)}
+-                                </IconDescription>
+-                            </div>
+-                            <p css={tw`text-xs text-neutral-600 text-center mt-1`}>of {diskLimit}</p>
++            <div className='wb-server-address'>
++                {server.allocations
++                    .filter((a) => a.isDefault)
++                    .map((a) => (
++                        <div key={a.id}>
++                            {a.alias || ip(a.ip)}:{a.port}
+                         </div>
+-                    </React.Fragment>
+-                )}
++                    ))}
+             </div>
+-            <div className={'status-bar'} />
+-        </StatusIndicatorBox>
++            {metric(
++                'CPU',
++                (stats?.cpuUsagePercent.toFixed(1) || '0') + '%',
++                server.limits.cpu ? server.limits.cpu + '%' : 'Unlimited',
++                !!stats && server.limits.cpu > 0 && stats.cpuUsagePercent >= server.limits.cpu * 0.9
++            )}
++            {metric(
++                'Memory',
++                bytesToString(stats?.memoryUsageInBytes || 0),
++                server.limits.memory ? bytesToString(mbToBytes(server.limits.memory)) : 'Unlimited',
++                !!stats && server.limits.memory > 0 && stats.memoryUsageInBytes >= mbToBytes(server.limits.memory) * 0.9
++            )}
++            {metric(
++                'Storage',
++                bytesToString(stats?.diskUsageInBytes || 0),
++                server.limits.disk ? bytesToString(mbToBytes(server.limits.disk)) : 'Unlimited',
++                !!stats && server.limits.disk > 0 && stats.diskUsageInBytes >= mbToBytes(server.limits.disk) * 0.9
++            )}
++        </Link>
+     );
+ };
+diff --git a/resources/scripts/components/dashboard/search/SearchContainer.tsx b/resources/scripts/components/dashboard/search/SearchContainer.tsx
+index 4da0f3a..a5647e7 100644
+--- a/resources/scripts/components/dashboard/search/SearchContainer.tsx
++++ b/resources/scripts/components/dashboard/search/SearchContainer.tsx
+@@ -1,6 +1,5 @@
+ import React, { useState } from 'react';
+-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+-import { faSearch } from '@fortawesome/free-solid-svg-icons';
++import { SearchIcon } from '@heroicons/react/outline';
+ import useEventListener from '@/plugins/useEventListener';
+ import SearchModal from '@/components/dashboard/search/SearchModal';
+ import Tooltip from '@/components/elements/tooltip/Tooltip';
+@@ -10,7 +9,8 @@ export default () => {
+ 
+     useEventListener('keydown', (e: KeyboardEvent) => {
+         if (['input', 'textarea'].indexOf(((e.target as HTMLElement).tagName || 'input').toLowerCase()) < 0) {
+-            if (!visible && e.metaKey && e.key.toLowerCase() === '/') {
++            if (!visible && (e.metaKey || e.ctrlKey) && ['/', 'k'].includes(e.key.toLowerCase())) {
++                e.preventDefault();
+                 setVisible(true);
+             }
+         }
+@@ -20,9 +20,16 @@ export default () => {
+         <>
+             {visible && <SearchModal appear visible={visible} onDismissed={() => setVisible(false)} />}
+             <Tooltip placement={'bottom'} content={'Search'}>
+-                <div className={'navigation-link'} onClick={() => setVisible(true)}>
+-                    <FontAwesomeIcon icon={faSearch} />
+-                </div>
++                <button
++                    className={'wb-quick-search'}
++                    type={'button'}
++                    onClick={() => setVisible(true)}
++                    aria-label={'Search all servers'}
++                >
++                    <SearchIcon aria-hidden={'true'} />
++                    <span>Find a server</span>
++                    <kbd>Ctrl K</kbd>
++                </button>
+             </Tooltip>
+         </>
+     );
+diff --git a/resources/scripts/components/server/console/ServerConsoleContainer.tsx b/resources/scripts/components/server/console/ServerConsoleContainer.tsx
+index de7ba3b..d3130df 100644
+--- a/resources/scripts/components/server/console/ServerConsoleContainer.tsx
++++ b/resources/scripts/components/server/console/ServerConsoleContainer.tsx
+@@ -22,7 +22,7 @@ const ServerConsoleContainer = () => {
+     const isNodeUnderMaintenance = ServerContext.useStoreState((state) => state.server.data!.isNodeUnderMaintenance);
+ 
+     return (
+-        <ServerContentBlock title={'Console'}>
++        <ServerContentBlock title={'Console'} className={'wb-console-page'}>
+             {(isNodeUnderMaintenance || isInstalling || isTransferring) && (
+                 <Alert type={'warning'} className={'mb-4'}>
+                     {isNodeUnderMaintenance
+@@ -33,7 +33,7 @@ const ServerConsoleContainer = () => {
+                 </Alert>
+             )}
+             <div className={'grid grid-cols-4 gap-4 mb-4'}>
+-                <div className={'hidden sm:block sm:col-span-2 lg:col-span-3 pr-4'}>
++                <div className={'col-span-4 sm:col-span-2 lg:col-span-3 pr-4'}>
+                     <h1 className={'font-header font-medium text-2xl text-gray-50 leading-relaxed line-clamp-1'}>
+                         {name}
+                     </h1>
+@@ -41,7 +41,7 @@ const ServerConsoleContainer = () => {
+                 </div>
+                 <div className={'col-span-4 sm:col-span-2 lg:col-span-1 self-end'}>
+                     <Can action={['control.start', 'control.stop', 'control.restart']} matchAny>
+-                        <PowerButtons className={'flex sm:justify-end space-x-2'} />
++                        <PowerButtons className={'wb-power-controls flex sm:justify-end space-x-2'} />
+                     </Can>
+                 </div>
+             </div>
+diff --git a/resources/scripts/components/server/console/StatBlock.tsx b/resources/scripts/components/server/console/StatBlock.tsx
+index 259ff47..7a694ce 100644
+--- a/resources/scripts/components/server/console/StatBlock.tsx
++++ b/resources/scripts/components/server/console/StatBlock.tsx
+@@ -3,7 +3,6 @@ import Icon from '@/components/elements/Icon';
+ import { IconDefinition } from '@fortawesome/free-solid-svg-icons';
+ import classNames from 'classnames';
+ import styles from './style.module.css';
+-import useFitText from 'use-fit-text';
+ import CopyOnClick from '@/components/elements/CopyOnClick';
+ 
+ interface StatBlockProps {
+@@ -16,11 +15,9 @@ interface StatBlockProps {
+ }
+ 
+ export default ({ title, copyOnClick, icon, color, className, children }: StatBlockProps) => {
+-    const { fontSize, ref } = useFitText({ minFontSize: 8, maxFontSize: 500 });
+-
+     return (
+         <CopyOnClick text={copyOnClick}>
+-            <div className={classNames(styles.stat_block, 'bg-gray-600', className)}>
++            <div className={classNames(styles.stat_block, 'wb-stat-block', className)}>
+                 <div className={classNames(styles.status_bar, color || 'bg-gray-700')} />
+                 <div className={classNames(styles.icon, color || 'bg-gray-700')}>
+                     <Icon
+@@ -33,13 +30,7 @@ export default ({ title, copyOnClick, icon, color, className, children }: StatBl
+                 </div>
+                 <div className={'flex flex-col justify-center overflow-hidden w-full'}>
+                     <p className={'font-header font-medium leading-tight text-xs md:text-sm text-gray-200'}>{title}</p>
+-                    <div
+-                        ref={ref}
+-                        className={'h-[1.75rem] w-full font-semibold text-gray-50 truncate'}
+-                        style={{ fontSize }}
+-                    >
+-                        {children}
+-                    </div>
++                    <div className={'wb-stat-value'}>{children}</div>
+                 </div>
+             </div>
+         </CopyOnClick>
+diff --git a/resources/scripts/components/server/console/style.module.css b/resources/scripts/components/server/console/style.module.css
+index 8088fcb..f0da28f 100644
+--- a/resources/scripts/components/server/console/style.module.css
++++ b/resources/scripts/components/server/console/style.module.css
+@@ -61,3 +61,50 @@
+ .chart_container {
+     @apply bg-gray-600 rounded shadow-lg pt-2 border-b-4 border-gray-700 relative;
+ }
++
++.stat_block {
++    background: var(--wb-panel);
++    border: 1px solid var(--wb-line);
++    border-radius: 12px;
++    box-shadow: none;
++    min-height: 72px;
++}
++.stat_block > .icon {
++    width: 32px;
++    height: 32px;
++    background: #22292a;
++    box-shadow: none;
++    border-radius: 8px;
++    margin-right: 12px;
++}
++.stat_block > .icon > svg {
++    width: 16px;
++    height: 16px;
++    color: #a6b6b2;
++}
++.stat_block p {
++    color: var(--wb-muted);
++    font-size: 12px;
++    font-weight: 400;
++    margin-bottom: 6px;
++}
++.terminal > .container {
++    border: 1px solid var(--wb-line);
++    border-bottom: 0;
++    border-radius: 12px 12px 0 0;
++    padding: 16px;
++    background: #0c1011;
++}
++.terminal .command_input {
++    background: #151b1d;
++    min-height: 48px;
++    border: 1px solid var(--wb-line);
++    border-radius: 0 0 12px 12px;
++    font-size: 12px;
++}
++.chart_container {
++    background: var(--wb-panel);
++    box-shadow: none;
++    border: 1px solid var(--wb-line);
++    border-radius: 12px;
++}
+diff --git a/tailwind.config.js b/tailwind.config.js
+index 7c814bd..9c65ca9 100644
+--- a/tailwind.config.js
++++ b/tailwind.config.js
+@@ -1,17 +1,6 @@
+ const colors = require('tailwindcss/colors');
+ 
+-const gray = {
+-    50: 'hsl(216, 33%, 97%)',
+-    100: 'hsl(214, 15%, 91%)',
+-    200: 'hsl(210, 16%, 82%)',
+-    300: 'hsl(211, 13%, 65%)',
+-    400: 'hsl(211, 10%, 53%)',
+-    500: 'hsl(211, 12%, 43%)',
+-    600: 'hsl(209, 14%, 37%)',
+-    700: 'hsl(209, 18%, 30%)',
+-    800: 'hsl(209, 20%, 25%)',
+-    900: 'hsl(210, 24%, 16%)',
+-};
++const gray = {50:'#f4f6f2',100:'#edf1eb',200:'#d5ddd3',300:'#b8c2b8',400:'#a3ada4',500:'#929c94',600:'#667168',700:'#282e29',800:'#1b1e1c',900:'#101311'};
+ 
+ module.exports = {
+     content: [
+@@ -23,7 +12,7 @@ module.exports = {
+                 header: ['"IBM Plex Sans"', '"Roboto"', 'system-ui', 'sans-serif'],
+             },
+             colors: {
+-                black: '#131a20',
++                black: '#101311',
+                 // "primary" and "neutral" are deprecated, prefer the use of "blue" and "gray"
+                 // in new code.
+                 primary: colors.blue,
+diff --git a/webpack.config.js b/webpack.config.js
+index af80869..9b4b875 100644
+--- a/webpack.config.js
++++ b/webpack.config.js
+@@ -40,6 +40,7 @@ module.exports = {
+                     {
+                         loader: 'css-loader',
+                         options: {
++                            url: { filter: (url) => !url.startsWith('/assets/') },
+                             modules: {
+                                 auto: true,
+                                 // https://github.com/webpack/css-loader/blob/main/CHANGELOG.md#700-2024-04-04
